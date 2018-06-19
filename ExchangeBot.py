@@ -5,8 +5,6 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import functions
 
 # Main code
-
-
 def main():
 
 	# Initiate logging module
@@ -22,23 +20,53 @@ def main():
 	f = open('token.txt', 'r')
 	tokenId = f.readline()
 
-	# Create bot object and its corresponding updater and dispatcher
+	# Create bot object and its corresponding updater, dispatcher and job queue
 	bot = telegram.Bot(token=tokenId)
 	updater = Updater(token=tokenId)
 	dispatcher = updater.dispatcher
+	jqueue = updater.job_queue
 
-	# Creating the relevant command handlers
-	updateDB_handler = CommandHandler('updateDB', functions.updateDBWrapper)
-	exchange_handler = CommandHandler(
-						'exchange', functions.exchangeWrapper, pass_args=True
-						)
+	# Scheduled jobs
+	# Automatically updates the coin DB every 6 hours
+	job_updateCoinDB = jqueue.run_repeating(functions.autoUpdateDBWrapper,
+											interval=21600,
+											first =0
+											)
+	job_updateCoinDB.enabled = True
+	
+	# Creating command handlers
+	updateDB_handler = CommandHandler('updateDB',
+									  functions.manualUpdateDBWrapper
+									  )
+	coin_handler = CommandHandler('c',
+								  functions.coinWrapper,
+								  pass_args=True
+								  )
+	cheapest_handler = CommandHandler('min',
+									  functions.cheapestWrapper,
+									  pass_args=True
+									  )
+	expensive_handler = CommandHandler('max',
+									   functions.expensiveWrapper,
+									   pass_args=True)
+	exchange_handler = CommandHandler('e',
+									  functions.exchangeWrapper,
+									  pass_args=True
+									  )
+	start_handler = CommandHandler('start',
+								   functions.startWrapper
+								   )
+
 
 	# Adding the handlers to the dispatcher
 	dispatcher.add_handler(updateDB_handler)
+	dispatcher.add_handler(coin_handler)
+	dispatcher.add_handler(expensive_handler)
+	dispatcher.add_handler(cheapest_handler)
 	dispatcher.add_handler(exchange_handler)
+	dispatcher.add_handler(start_handler)
 
-	# Disabled the following handlers to remove cache.
-	# Uncomment to reinstate caching functionality.
+	# Disabled the following handlers
 
 	# update_handler = CommandHandler('update',
 	# 								functions.updateWrapper,
